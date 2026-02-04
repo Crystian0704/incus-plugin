@@ -1,0 +1,129 @@
+- name: Cleanup profile test
+  crystian.incus.incus_profile:
+    name: "test-profile"
+    state: absent
+  ignore_errors: true
+
+- name: Create profile
+  crystian.incus.incus_profile:
+    name: "test-profile"
+    description: "Test Profile"
+    config:
+      limits.cpu: "1"
+    devices:
+      root:
+        path: /
+        pool: default
+        type: disk
+  register: profile_create
+
+- name: Assert create
+  assert:
+    that:
+      - profile_create.changed == true
+
+- name: Update profile (idempotence)
+  crystian.incus.incus_profile:
+    name: "test-profile"
+    description: "Test Profile"
+    config:
+      limits.cpu: "1"
+    devices:
+      root:
+        path: /
+        pool: default
+        type: disk
+  register: profile_idem
+
+- name: Assert idempotence
+  assert:
+    that:
+      - profile_idem.changed == false
+
+- name: Update profile config
+  crystian.incus.incus_profile:
+    name: "test-profile"
+    config:
+      limits.cpu: "2"
+  register: profile_update
+
+- name: Assert update
+  assert:
+    that:
+      - profile_update.changed == true
+
+- name: Verify update
+  command: incus profile show test-profile
+  register: profile_show
+
+- name: Assert verify
+  assert:
+    that:
+      - "'limits.cpu: \"2\"' in profile_show.stdout"
+
+- name: Create profile source file
+  copy:
+    dest: /tmp/test_profile_source.yml
+    content: |
+      description: "Profile from source"
+      config:
+        limits.memory: "1GiB"
+      devices:
+        eth0:
+          type: nic
+          network: incusbr0
+          name: eth0
+
+- name: Create profile from source
+  crystian.incus.incus_profile:
+    name: "test-profile-source"
+    source: /tmp/test_profile_source.yml
+  register: profile_source_create
+
+- name: Assert source create
+  assert:
+    that:
+      - profile_source_create.changed == true
+
+- name: Verify source create
+  command: incus profile show test-profile-source
+  register: profile_source_show
+
+- name: Assert source verify
+  assert:
+    that:
+      - "'limits.memory: 1GiB' in profile_source_show.stdout"
+      - "'Profile from source' in profile_source_show.stdout"
+
+- name: Update profile with source + override
+  crystian.incus.incus_profile:
+    name: "test-profile-source"
+    source: /tmp/test_profile_source.yml
+    config:
+      limits.memory: "2GiB" # Override source
+  register: profile_source_override
+
+- name: Verify source override
+  command: incus profile show test-profile-source
+  register: profile_override_show
+
+- name: Assert source override
+  assert:
+    that:
+      - "'limits.memory: 2GiB' in profile_override_show.stdout"
+
+- name: Cleanup source profile
+  crystian.incus.incus_profile:
+    name: "test-profile-source"
+    state: absent
+
+- name: Delete profile
+  crystian.incus.incus_profile:
+    name: "test-profile"
+    state: absent
+  register: profile_delete
+
+- name: Assert delete
+  assert:
+    that:
+      - profile_delete.changed == true

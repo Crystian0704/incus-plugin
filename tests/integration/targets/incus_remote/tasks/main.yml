@@ -1,0 +1,109 @@
+- name: Cleanup previous test resources
+  crystian.incus.incus_remote:
+    name: "test-remote"
+    state: absent
+  ignore_errors: true
+
+- name: Cleanup VM
+  crystian.incus.incus_instance:
+    name: "test-nested-incus"
+    state: absent
+    force: true
+  ignore_errors: true
+
+- name: Create Debian VM for nested Incus
+  crystian.incus.incus_instance:
+    name: "test-nested-incus"
+    remote_image: "images:debian/12"
+    config:
+      limits.cpu: "2"
+      limits.memory: "2GiB"
+      security.nesting: "true"
+    started: true
+    state: present
+  register: vm_create
+
+- name: Wait for VM networking
+  wait_for:
+    timeout: 60
+  # Better to check connectivity
+
+- name: Install dependencies
+  command: incus exec test-nested-incus -- sh -c 'apt-get update && apt-get install -y ca-certificates curl gnupg'
+  ignore_errors: true
+
+- name: Add Zabbly Key
+  command: incus exec test-nested-incus -- sh -c 'mkdir -p /etc/apt/keyrings; curl -fsSL https://pkgs.zabbly.com/key.asc -o /etc/apt/keyrings/zabbly.asc'
+  ignore_errors: true
+
+- name: Add Zabbly Repo
+  command: incus exec test-nested-incus -- sh -c 'echo "deb [signed-by=/etc/apt/keyrings/zabbly.asc] https://pkgs.zabbly.com/incus/stable $(. /etc/os-release && echo ${VERSION_CODENAME}) main" > /etc/apt/sources.list.d/zabbly-incus-stable.list'
+  ignore_errors: true
+
+- name: Install Incus (Zabbly)
+  command: incus exec test-nested-incus -- sh -c 'apt-get update && apt-get install -y incus'
+  # Removed ignore_errors to catch failure
+  register: install_incus
+
+- name: Debug install
+  debug:
+    var: install_incus
+
+# If apt install fails (e.g. package not found), we might skip or fail.
+# Assuming environment can install it.
+
+- name: Initialize Incus in VM
+  command: incus exec test-nested-incus -- incus admin init --minimal
+  register: init_incus
+
+- name: Configure Incus HTTPS address
+  command: incus exec test-nested-incus -- incus config set core.https_address :8443
+
+- name: Generate Trust Token
+  command: incus exec test-nested-incus -- incus config trust add test-client --quiet
+  register: trust_token_o
+
+- name: Set Token Fact
+  set_fact:
+    trust_token: "{{ trust_token_o.stdout | trim }}"
+
+- name: Get VM IP
+  command: incus list test-nested-incus --format=json
+  register: vm_info
+
+- name: Set IP fact
+  set_fact:
+    vm_ip: "{{ (vm_info.stdout | from_json)[0].state.network | dict2items | map(attribute='value.addresses') | flatten | selectattr('family', 'equalto', 'inet') | map(attribute='address') | first }}"
+
+- name: Add Remote using Token
+  crystian.incus.incus_remote:
+    name: "test-remote"
+    url: "https://{{ vm_ip }}:8443"
+    token: "{{ trust_token }}"
+    accept_certificate: true
+  register: remote_add
+
+- name: Assert remote added
+  assert:
+    that:
+      - remote_add.changed == true
+
+- name: Verify remote list
+  command: incus remote list
+  register: remote_list
+
+- name: Assert remote in list
+  assert:
+    that:
+      - "'test-remote' in remote_list.stdout"
+
+- name: Remove Remote
+  crystian.incus.incus_remote:
+    name: "test-remote"
+    state: absent
+
+- name: Cleanup VM
+  crystian.incus.incus_instance:
+    name: "test-nested-incus"
+    state: absent
+    force: true

@@ -1,0 +1,112 @@
+- name: Cleanup project test
+  crystian.incus.incus_project:
+    name: "test-project"
+    state: absent
+  ignore_errors: true
+
+- name: Create project
+  crystian.incus.incus_project:
+    name: "test-project"
+    description: "Test Project"
+    config:
+      features.images: "false"
+      limits.containers: "5"
+  register: project_create
+
+- name: Assert create
+  assert:
+    that:
+      - project_create.changed == true
+
+- name: Update project (idempotence)
+  crystian.incus.incus_project:
+    name: "test-project"
+    description: "Test Project"
+    config:
+      features.images: "false"
+      limits.containers: "5"
+  register: project_idem
+
+- name: Assert idempotence
+  assert:
+    that:
+      - project_idem.changed == false
+
+- name: Update config
+  crystian.incus.incus_project:
+    name: "test-project"
+    config:
+      limits.containers: "10"
+  register: project_update
+
+- name: Assert update
+  assert:
+    that:
+      - project_update.changed == true
+
+- name: Verify update
+  command: incus project show test-project
+  register: project_show
+
+- name: Assert verify
+  assert:
+    that:
+      - "'limits.containers: \"10\"' in project_show.stdout"
+
+- name: Create project source file
+  copy:
+    dest: /tmp/test_project_source.yml
+    content: |
+      description: "Project from source"
+      config:
+        limits.containers: "3"
+        features.profiles: "true"
+
+- name: Create project from source
+  crystian.incus.incus_project:
+    name: "test-project-source"
+    source: /tmp/test_project_source.yml
+  register: project_source_create
+
+- name: Assert source create
+  assert:
+    that:
+      - project_source_create.changed == true
+      
+- name: Verify source
+  command: incus project show test-project-source
+  register: project_source_show
+
+- name: Assert source verify
+  assert:
+    that:
+      - "'limits.containers: \"3\"' in project_source_show.stdout"
+
+- name: Update source with override
+  crystian.incus.incus_project:
+    name: "test-project-source"
+    source: /tmp/test_project_source.yml
+    config:
+      limits.containers: "7"
+  register: project_source_update
+
+- name: Assert source update
+  assert:
+    that:
+      - project_source_update.changed == true
+
+- name: Cleanup source project
+  crystian.incus.incus_project:
+    name: "test-project-source"
+    state: absent
+
+- name: Delete project
+  crystian.incus.incus_project:
+    name: "test-project"
+    state: absent
+  register: project_delete
+
+- name: Assert delete
+  assert:
+    that:
+      - project_delete.changed == true

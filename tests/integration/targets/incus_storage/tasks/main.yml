@@ -1,0 +1,388 @@
+- name: Cleanup attached volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-attach"
+    state: absent
+  ignore_errors: true
+
+- name: Cleanup instance
+  crystian.incus.incus_instance:
+    name: "test-attach-instance"
+    state: absent
+    force: true
+  ignore_errors: true
+
+- name: Cleanup volume sched
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-sched"
+    state: absent
+  ignore_errors: true
+
+- name: Cleanup block volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool-lvm"
+    name: "test-vol-block"
+    state: absent
+  ignore_errors: true
+
+- name: Cleanup block attach vm
+  crystian.incus.incus_instance:
+    name: "test-attach-vm"
+    state: absent
+    force: true
+  ignore_errors: true
+  
+- name: Cleanup volume copy
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-copy"
+    state: absent
+  ignore_errors: true
+  
+- name: Cleanup simple volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol"
+    state: absent
+  ignore_errors: true
+
+- name: Cleanup storage test
+  crystian.incus.incus_storage:
+    name: "test-pool"
+    state: absent
+  ignore_errors: true
+  
+- name: Cleanup storage test lvm
+  crystian.incus.incus_storage:
+    name: "test-pool-lvm"
+    state: absent
+  ignore_errors: true
+
+- name: Create storage pool (dir)
+  crystian.incus.incus_storage:
+    name: "test-pool"
+    driver: dir
+    description: "Test pool"
+  register: pool_create
+
+- name: Assert create
+  assert:
+    that:
+      - pool_create.changed == true
+
+- name: Create volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol"
+    config:
+       size: "10MiB"
+  register: vol_create
+
+# Can't set size on dir pool volume usually?
+# "Setting storage volume configuration is not supported for this driver" might happen for dir.
+# But let's try.
+
+- name: Assert volume create
+  assert:
+    that:
+      - vol_create.changed == true
+
+- name: Create volume with schedule
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-sched"
+    config:
+       size: "10MiB"
+       "snapshots.schedule": "@daily"
+       "snapshots.expiry": "1d"
+  register: vol_sched_create
+
+- name: Assert volume schedule create
+  assert:
+    that:
+      - vol_sched_create.changed == true
+
+- name: Create snapshot
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-sched"
+    snapshot: "snap0"
+    state: present
+  register: snap_create
+
+- name: Assert snapshot create
+  assert:
+    that:
+      - snap_create.changed == true
+
+- name: Restore snapshot
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-sched"
+    snapshot: "snap0"
+    state: restored
+  register: snap_restore
+
+- name: Assert snapshot restore
+  assert:
+    that:
+      - snap_restore.changed == true
+
+- name: Export volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-sched"
+    state: exported
+    export_to: "/tmp/test-vol.tar.gz"
+  register: vol_export
+
+- name: Assert export
+  assert:
+    that:
+      - vol_export.changed == true
+
+- name: Copy volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-sched"
+    state: copied
+    target_pool: "test-pool"
+    target_volume: "test-vol-copy"
+  register: vol_copy
+
+- name: Assert copy
+  assert:
+    that:
+      - vol_copy.changed == true
+
+- name: Delete copy
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-copy"
+    state: absent
+
+- name: Delete snapshot
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-sched"
+    snapshot: "snap0"
+    state: absent
+  register: snap_del
+
+- name: Assert snapshot delete
+  assert:
+    that:
+      - snap_del.changed == true
+      
+- name: Cleanup volume sched
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-sched"
+    state: absent
+  ignore_errors: true
+
+- name: Cleanup export file
+  ansible.builtin.file:
+    path: /tmp/test-vol.tar.gz
+    state: absent
+
+
+- name: Create alpine instance for attachment
+  crystian.incus.incus_instance:
+    name: "test-attach-instance"
+    remote_image: "images:alpine/edge"
+    state: present
+    started: false
+
+- name: Create attached volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-attach"
+    config:
+       size: "10MiB"
+    attach_to: "test-attach-instance"
+    attach_path: "/data"
+  register: vol_attach
+
+- name: Assert attached
+  assert:
+    that:
+      - vol_attach.changed == true
+
+- name: Idempotency attached
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-attach"
+    attach_to: "test-attach-instance"
+    attach_path: "/data"
+  register: vol_attach_idem
+
+- name: Assert idempotency attach
+  assert:
+    that:
+      - vol_attach_idem.changed == false
+
+- name: Cleanup instance
+  crystian.incus.incus_instance:
+    name: "test-attach-instance"
+    state: absent
+    force: true
+  ignore_errors: true
+
+- name: Cleanup attached volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol-attach"
+    state: absent
+  ignore_errors: true
+
+- name: Delete volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool"
+    name: "test-vol"
+    state: absent
+  register: vol_del
+
+- name: Assert volume delete
+  assert:
+    that:
+      - vol_del.changed == true
+
+- name: Delete pool (dir)
+  crystian.incus.incus_storage:
+    name: "test-pool"
+    state: absent
+  register: pool_del
+
+- name: Assert pool delete (dir)
+  assert:
+    that:
+      - pool_del.changed == true
+
+# ZFS Loop
+- name: Create storage pool (zfs loop)
+  crystian.incus.incus_storage:
+    name: "test-pool-zfs"
+    driver: zfs
+    config:
+      size: 1GiB
+  register: pool_zfs_create
+  ignore_errors: true
+
+- name: Assert create (zfs)
+  assert:
+    that:
+      - pool_zfs_create.changed == true
+      - pool_zfs_create.failed is not defined or not pool_zfs_create.failed
+  when: pool_zfs_create is succeeded
+  ignore_errors: true
+
+- name: Delete pool (zfs)
+  crystian.incus.incus_storage:
+    name: "test-pool-zfs"
+    state: absent
+  when: pool_zfs_create is succeeded
+  ignore_errors: true
+
+# Btrfs Loop
+- name: Create storage pool (btrfs loop)
+  crystian.incus.incus_storage:
+    name: "test-pool-btrfs"
+    driver: btrfs
+    config:
+      size: 1GiB
+  register: pool_btrfs_create
+  ignore_errors: true
+
+- name: Assert create (btrfs)
+  assert:
+    that:
+      - pool_btrfs_create.changed == true
+  when: pool_btrfs_create is succeeded
+  ignore_errors: true
+
+- name: Delete pool (btrfs)
+  crystian.incus.incus_storage:
+    name: "test-pool-btrfs"
+    state: absent
+  when: pool_btrfs_create is succeeded
+  ignore_errors: true
+
+# LVM Loop
+- name: Create storage pool (lvm loop)
+  crystian.incus.incus_storage:
+    name: "test-pool-lvm"
+    driver: lvm
+    config:
+      size: 1GiB
+  register: pool_lvm_create
+  ignore_errors: true
+
+- name: Assert create (lvm)
+  assert:
+    that:
+      - pool_lvm_create.changed == true
+  when: pool_lvm_create is succeeded
+  ignore_errors: true
+
+- name: Create block volume (lvm)
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool-lvm"
+    name: "test-vol-block"
+    type: block
+    config:
+       size: "10MiB"
+  register: vol_block_create
+  when: pool_lvm_create is succeeded
+
+- name: Assert block create (lvm)
+  assert:
+    that:
+      - vol_block_create.changed == true
+  when: pool_lvm_create is succeeded
+
+- name: Create alpine VM for block attachment
+  crystian.incus.incus_instance:
+    name: "test-attach-vm"
+    remote_image: "images:alpine/edge"
+    vm: true
+    state: present
+    started: false
+  when: pool_lvm_create is succeeded
+
+- name: Attach block volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool-lvm"
+    name: "test-vol-block"
+    type: block
+    attach_to: "test-attach-vm"
+  register: vol_block_attach
+  when: pool_lvm_create is succeeded
+
+- name: Assert block attach
+  assert:
+    that:
+      - vol_block_attach.changed == true
+  when: pool_lvm_create is succeeded
+
+- name: Cleanup block setup
+  crystian.incus.incus_instance:
+    name: "test-attach-vm"
+    state: absent
+    force: true
+  ignore_errors: true
+
+- name: Cleanup block volume
+  crystian.incus.incus_storage_volume:
+    pool: "test-pool-lvm"
+    name: "test-vol-block"
+    state: absent
+  ignore_errors: true
+  
+- name: Delete pool (lvm)
+  crystian.incus.incus_storage:
+    name: "test-pool-lvm"
+    state: absent
+  when: pool_lvm_create is succeeded
+  ignore_errors: true

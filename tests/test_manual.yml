@@ -4,3 +4,7 @@
   tasks:
     - include_tasks: integration/targets/incus_image/tasks/main.yml
     - include_tasks: integration/targets/incus_publish/tasks/main.yml
+    - include_tasks: integration/targets/incus_storage/tasks/main.yml
+    - include_tasks: integration/targets/incus_profile/tasks/main.yml
+    - include_tasks: integration/targets/incus_project/tasks/main.yml
+    - include_tasks: integration/targets/incus_remote/tasks/main.yml
