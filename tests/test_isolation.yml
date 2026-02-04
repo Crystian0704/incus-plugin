@@ -1,5 +1,0 @@
-- import_playbook: infra/setup.yml
-
-- import_playbook: test_manual.yml
-  vars:
-    target_remote: test-infra

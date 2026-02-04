@@ -1,9 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
-
 DOCUMENTATION = r'''
 ---
 module: incus_exec
@@ -61,8 +59,8 @@ options:
   mode:
     description:
       - Execution mode.
-      - 'interactive' attaches to the terminal (mostly for manual runs, but supported).
-      - 'non-interactive' (default) captures stdout/stderr.
+      - "'interactive' attaches to the terminal (mostly for manual runs, but supported)."
+      - "'non-interactive' (default) captures stdout/stderr."
     required: false
     type: str
     default: non-interactive
@@ -70,19 +68,16 @@ options:
 author:
   - Crystian (@crystian)
 '''
-
 EXAMPLES = r'''
 - name: Run a simple command
   crystian.incus.incus_exec:
     name: my-container
     command: uptime
-
 - name: Run as specific user
   crystian.incus.incus_exec:
     name: my-container
     command: whoami
     user: 1000
-
 - name: Run in specific directory with env vars
   crystian.incus.incus_exec:
     name: my-container
@@ -91,7 +86,6 @@ EXAMPLES = r'''
     env:
       MY_VAR: "hello"
 '''
-
 RETURN = r'''
 stdout:
   description: The standard output of the command
@@ -110,11 +104,9 @@ cmd:
   returned: always
   type: str
 '''
-
 from ansible.module_utils.basic import AnsibleModule
 import subprocess
 import shlex
-
 def main():
     module = AnsibleModule(
         argument_spec=dict(
@@ -130,7 +122,6 @@ def main():
         ),
         supports_check_mode=True,
     )
-
     name = module.params['name']
     command_param = module.params['command']
     remote = module.params['remote']
@@ -140,75 +131,42 @@ def main():
     cwd = module.params['cwd']
     env = module.params['env']
     mode = module.params['mode']
-
-    # Resolve full instance name
     target = name
     if remote and remote != 'local':
         target = "{}:{}".format(remote, name)
-
-    # Build base incus command
     incus_cmd = ['incus', 'exec', target]
-
-    # Add project
     if project:
         incus_cmd.extend(['--project', project])
-
-    # Add options
     if user is not None:
         incus_cmd.extend(['--user', str(user)])
-    
     if group is not None:
         incus_cmd.extend(['--group', str(group)])
-        
     if cwd:
         incus_cmd.extend(['--cwd', cwd])
-        
     if mode == 'interactive':
         incus_cmd.extend(['--mode', 'interactive'])
     else:
         incus_cmd.extend(['--mode', 'non-interactive'])
-
     if env:
         for k, v in env.items():
             incus_cmd.extend(['--env', "{}={}".format(k, v)])
-
-    # Separate options from command
     incus_cmd.append('--')
-
-    # Parse command
     if isinstance(command_param, list):
-        # Allow user to pass list of args
-        # e.g. command: ['ls', '-la']
-        # Convert non-strings to strings just in case
         cmd_args = [str(x) for x in command_param]
         incus_cmd.extend(cmd_args)
     elif isinstance(command_param, str):
-        # e.g. command: "ls -la"
-        # We should split this to avoid shell injection wrapping by incus?
-        # incus exec expects: cmd arg1 arg2 ...
-        # If we pass "ls -la" as one string, incus tries to exec a file named "ls -la".
-        # So we must split.
         cmd_args = shlex.split(command_param)
         incus_cmd.extend(cmd_args)
     else:
         module.fail_json(msg="Command must be a string or a list")
-
     if module.check_mode:
         module.exit_json(changed=False, msg="Command would run: {}".format(" ".join(incus_cmd)), cmd=" ".join(incus_cmd))
-
-    # Execute
     try:
-        # Run command
-        # Using subprocess to capture output properly
         p = subprocess.Popen(incus_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
-        
         rc = p.returncode
-        
-        # Decode output
         out_str = stdout.decode('utf-8') if stdout else ''
         err_str = stderr.decode('utf-8') if stderr else ''
-
         if rc != 0:
             module.fail_json(
                 msg="Command failed with rc {}".format(rc),
@@ -217,7 +175,6 @@ def main():
                 stderr=err_str,
                 cmd=" ".join(incus_cmd)
             )
-
         module.exit_json(
             changed=True,
             rc=rc,
@@ -225,9 +182,7 @@ def main():
             stderr=err_str,
             cmd=" ".join(incus_cmd)
         )
-
     except Exception as e:
         module.fail_json(msg="Failed to run incus exec: {}".format(str(e)))
-
 if __name__ == '__main__':
     main()

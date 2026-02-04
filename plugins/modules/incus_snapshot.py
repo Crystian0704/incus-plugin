@@ -1,9 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
-
 DOCUMENTATION = r'''
 ---
 module: incus_snapshot
@@ -78,52 +76,44 @@ options:
 author:
   - Crystian (@crystian)
 '''
-
 EXAMPLES = r'''
 - name: Create a snapshot
   crystian.incus.incus_snapshot:
     instance: my-container
     snapshot_name: snap0
     state: present
-
 - name: Create a stateful snapshot (VM only)
   crystian.incus.incus_snapshot:
     instance: my-vm
     snapshot_name: state-snap
     stateful: true
     state: present
-
 - name: Restore a snapshot
   crystian.incus.incus_snapshot:
     instance: my-container
     snapshot_name: snap0
     state: restored
-
 - name: Rename a snapshot
   crystian.incus.incus_snapshot:
     instance: my-container
     snapshot_name: snap0
     new_name: snap-initial
     state: renamed
-
 - name: Delete a snapshot
   crystian.incus.incus_snapshot:
     instance: my-container
     snapshot_name: snap0
     state: absent
 '''
-
 RETURN = r'''
 msg:
   description: Status message
   returned: always
   type: str
 '''
-
 from ansible.module_utils.basic import AnsibleModule
 import subprocess
 import json
-
 class IncusSnapshot(object):
     def __init__(self, module):
         self.module = module
@@ -136,143 +126,88 @@ class IncusSnapshot(object):
         self.stateful = module.params['stateful']
         self.remote = module.params['remote']
         self.project = module.params['project']
-
         self.cron = module.params['cron']
         self.cron_stopped = module.params['cron_stopped']
         self.pattern = module.params['pattern']
         self.expiry = module.params['expiry']
-
         self.target_instance = self.instance
         if self.remote and self.remote != 'local':
             self.target_instance = "{}:{}".format(self.remote, self.instance)
-
-        # Full snapshot format: instance/snapshot
         if self.snapshot_name:
             self.target_snapshot = "{}/{}".format(self.target_instance, self.snapshot_name)
         else:
             self.target_snapshot = None
-
     def run_incus(self, args):
         cmd = ['incus']
         if self.project:
             cmd.extend(['--project', self.project])
         cmd.extend(args)
-        
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         return p.returncode, stdout.decode('utf-8'), stderr.decode('utf-8')
-
     def exists(self):
-        # incus snapshot show <instance> <snapshot>
         rc, out, err = self.run_incus(['snapshot', 'show', self.target_instance, self.snapshot_name])
         return rc == 0
-
     def create(self):
         if self.exists():
             if self.reuse:
-                # If reuse, we delete then recreate? Or does incus snapshot create --reuse work?
-                # The CLI help says: "--reuse  If the snapshot name already exists, delete and create a new one"
                 pass 
             else:
                 self.module.exit_json(changed=False, msg="Snapshot '{}' already exists".format(self.snapshot_name))
-
         cmd_args = ['snapshot', 'create', self.target_instance, self.snapshot_name]
-        
         if self.reuse:
             cmd_args.append('--reuse')
-        
         if self.expires:
-             # incus snapshot create ... --no-expiry is for overriding default expiry
-             # How to set specific expiry? 
-             # Seems typical usage relies on config modification afterwards or globally.
-             # Wait, documentation says: "snapshots.expiry"
-             # Maybe we cannot set specific expiry date CLI flag during create easily?
-             # 'incus snapshot create --help' might show.
-             # Assuming standard incus/lxd behavior.
-             # Usually snapshot creation just takes name. Expiry is a config property.
              pass
-
         if self.stateful:
             cmd_args.append('--stateful')
-
         if self.module.check_mode:
             self.module.exit_json(changed=True, msg="Snapshot would be created")
-
         rc, out, err = self.run_incus(cmd_args)
         if rc != 0:
             self.module.fail_json(msg="Failed to create snapshot: " + err, stdout=out, stderr=err)
-
-        # Apply expiry if needed (could require config edit)
         if self.expires and not self.module.check_mode:
-             # incus config set <instance>/<snapshot> snapshots.expiry <value>
              self.run_incus(['config', 'set', self.target_snapshot, 'snapshots.expiry={}'.format(self.expires)])
-
         self.module.exit_json(changed=True, msg="Snapshot created")
-
     def delete(self):
         if not self.exists():
             self.module.exit_json(changed=False, msg="Snapshot not found")
-
         cmd_args = ['snapshot', 'delete', self.target_instance, self.snapshot_name]
-        
         if self.module.check_mode:
             self.module.exit_json(changed=True, msg="Snapshot would be deleted")
-
         rc, out, err = self.run_incus(cmd_args)
         if rc != 0:
             self.module.fail_json(msg="Failed to delete snapshot: " + err, stdout=out, stderr=err)
-
         self.module.exit_json(changed=True, msg="Snapshot deleted")
-
     def restore(self):
         if not self.exists():
              self.module.fail_json(msg="Snapshot '{}' does not exist".format(self.snapshot_name))
-
-        # We can't easily check if restore is "needed" (i.e. if current state differs).
-        # So we always restore if requested? Or maybe make it idempotent/check mode safe?
-        # Restoring is a destructive action on current state.
-        # We will mark changed=True.
-
         cmd_args = ['snapshot', 'restore', self.target_instance, self.snapshot_name]
-        
         if self.stateful:
             cmd_args.append('--stateful')
-
         if self.module.check_mode:
             self.module.exit_json(changed=True, msg="Instance would be restored from snapshot")
-
         rc, out, err = self.run_incus(cmd_args)
         if rc != 0:
             self.module.fail_json(msg="Failed to restore snapshot: " + err, stdout=out, stderr=err)
-
         self.module.exit_json(changed=True, msg="Instance restored")
-
     def rename(self):
         if not self.exists():
             self.module.fail_json(msg="Snapshot '{}' does not exist".format(self.snapshot_name))
-        
         if not self.new_name:
             self.module.fail_json(msg="'new_name' is required for state=renamed")
-
-        # Check if new name already exists
         new_target = "{}/{}".format(self.target_instance, self.new_name)
         rc, _, _ = self.run_incus(['info', new_target])
         if rc == 0:
              self.module.exit_json(changed=False, msg="Snapshot '{}' already exists (as new name)".format(self.new_name))
-
         cmd_args = ['snapshot', 'rename', self.target_instance, self.snapshot_name, self.new_name]
-
         if self.module.check_mode:
             self.module.exit_json(changed=True, msg="Snapshot would be renamed")
-
         rc, out, err = self.run_incus(cmd_args)
         if rc != 0:
             self.module.fail_json(msg="Failed to rename snapshot: " + err, stdout=out, stderr=err)
-
         self.module.exit_json(changed=True, msg="Snapshot renamed")
-
     def configure(self):
-        # Update instance configuration for snapshots
         configs = {}
         if self.cron is not None:
             configs['snapshots.schedule'] = self.cron
@@ -282,46 +217,22 @@ class IncusSnapshot(object):
             configs['snapshots.pattern'] = self.pattern
         if self.expiry is not None:
             configs['snapshots.expiry'] = self.expiry
-            
         if not configs:
             return
-
-        # Check current config? For idempotency?
-        # incus config show <instance>
-        # For simplicity, we can just set them. 'incus config set' is idempotent if value matches.
-        # But to report 'changed', we should check.
-        
-        # Get current config
         rc, out, err = self.run_incus(['config', 'show', self.target_instance])
         current_config = {}
         if rc == 0:
             lines = out.splitlines()
-            # Parsing yaml-like output safely? 
-            # Output is YAML.
-            # But let's assume we can set if not checking.
-            # Ideally we check.
             pass
-
-        # We will iterate and set.
-        # To verify change, we'd need to parse current config properly.
-        # Let's use 'incus config set' and assume changed=True for now unless we do deep check.
-        # Optimization: Check if we can just set all at once or individually.
-        # incus config set <instance> key=value key2=value2 ... works? The docs say key=value...
-        
         cmd_args = ['config', 'set', self.target_instance]
         for k, v in configs.items():
             cmd_args.append("{}={}".format(k, v))
-            
         if self.module.check_mode:
             self.module.exit_json(changed=True, msg="Instance snapshot configuration would be updated")
-            
         rc, out, err = self.run_incus(cmd_args)
         if rc != 0:
             self.module.fail_json(msg="Failed to update configuration: " + err, stdout=out, stderr=err)
-            
-        # We assume changed. Ideally we'd diff.
         self.module.exit_json(changed=True, msg="Instance snapshot configuration updated")
-
     def run(self):
         if self.state == 'present':
             if self.snapshot_name:
@@ -334,7 +245,6 @@ class IncusSnapshot(object):
             self.restore()
         elif self.state == 'renamed':
             self.rename()
-
 def main():
     module = AnsibleModule(
         argument_spec=dict(
@@ -347,8 +257,6 @@ def main():
             stateful=dict(type='bool', default=False),
             remote=dict(type='str', default='local', required=False),
             project=dict(type='str', default='default', required=False),
-            
-            # Scheduling config
             cron=dict(type='str', required=False),
             cron_stopped=dict(type='bool', required=False),
             pattern=dict(type='str', required=False),
@@ -361,9 +269,7 @@ def main():
         ],
         supports_check_mode=True,
     )
-
     manager = IncusSnapshot(module)
     manager.run()
-
 if __name__ == '__main__':
     main()

@@ -41,7 +41,7 @@
     - name: Install dependencies (curl, gpg)
       crystian.incus.incus_exec:
         instance: "{{ vm_name }}"
-        command: "sh -c 'apt-get update && apt-get install -y ca-certificates curl gnupg'"
+        command: "sh -c 'apt-get update && apt-get install -y ca-certificates curl gnupg lvm2 btrfs-progs'"
       register: dep_install
       retries: 3
       delay: 5

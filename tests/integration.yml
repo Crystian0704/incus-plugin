@@ -1,0 +1,67 @@
+---
+- name: Setup Integration Environment
+  import_playbook: infra/setup.yml
+  tags: [always, setup]
+
+- name: Run Integration Tests
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    target_remote: test-infra
+  tasks:
+    - name: Test incus_image
+      include_tasks: integration/targets/incus_image/tasks/main.yml
+      tags: [incus_image]
+
+    - name: Test incus_publish
+      include_tasks: integration/targets/incus_publish/tasks/main.yml
+      tags: [incus_publish]
+
+    - name: Test incus_storage
+      include_tasks: integration/targets/incus_storage/tasks/main.yml
+      tags: [incus_storage]
+
+    - name: Test incus_profile
+      include_tasks: integration/targets/incus_profile/tasks/main.yml
+      tags: [incus_profile]
+
+    - name: Test incus_project
+      include_tasks: integration/targets/incus_project/tasks/main.yml
+      tags: [incus_project]
+
+    - name: Test incus_instance
+      include_tasks: integration/targets/incus_instance/tasks/main.yml
+      tags: [incus_instance]
+
+    - name: Test incus_config
+      include_tasks: integration/targets/incus_config/tasks/main.yml
+      tags: [incus_config]
+
+    - name: Test incus_exec
+      include_tasks: integration/targets/incus_exec/tasks/main.yml
+      tags: [incus_exec]
+
+    - name: Test incus_file
+      include_tasks: integration/targets/incus_file/tasks/main.yml
+      tags: [incus_file]
+
+    - name: Test incus_snapshot
+      include_tasks: integration/targets/incus_snapshot/tasks/main.yml
+      tags: [incus_snapshot]
+
+    - name: Test incus_export
+      include_tasks: integration/targets/incus_export/tasks/main.yml
+      tags: [incus_export]
+
+    - name: Test incus_list
+      include_tasks: integration/targets/incus_list/tasks/main.yml
+      tags: [incus_list]
+
+    - name: Test incus_instance_cloud_init
+      include_tasks: integration/targets/incus_instance_cloud_init/tasks/main.yml
+      tags: [incus_instance_cloud_init]
+
+    - name: Test incus_remote
+      include_tasks: integration/targets/incus_remote/tasks/main.yml
+      tags: [incus_remote]

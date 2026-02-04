@@ -1,8 +1,0 @@
----
-- hosts: localhost
-  connection: local
-  gather_facts: false
-  collections:
-    - crystian.incus
-  tasks:
-    - import_tasks: integration/targets/incus_instance/tasks/main.yml
