@@ -3,6 +3,7 @@
   crystian.incus.incus_instance:
     name: test-ansible-init
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     started: false
   register: result_init
 
@@ -16,6 +17,7 @@
   crystian.incus.incus_instance:
     name: test-ansible-init
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     started: false
   register: result_init_idempotency
 
@@ -28,6 +30,7 @@
   crystian.incus.incus_instance:
     name: test-ansible-launch
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     started: true
   register: result_launch
 
@@ -43,6 +46,7 @@
   crystian.incus.incus_instance:
     name: test-ansible-launch
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     started: true
   register: result_launch_idempotency
 
@@ -55,6 +59,7 @@
   crystian.incus.incus_instance:
     name: test-ansible-init
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     started: true
   register: result_start
 
@@ -65,7 +70,11 @@
       - result_start.instance.status == "Running"
 
 - name: Cleanup tests
-  command: incus delete --force {{ item }}
+  crystian.incus.incus_instance:
+    name: "{{ item }}"
+    remote: "{{ target_remote | default(omit) }}"
+    state: absent
+    force: true
   loop:
     - test-ansible-init
     - test-ansible-launch
@@ -87,17 +96,27 @@
       # Location might not be populated or 'none' depending on incus version/cluster state
 
 - name: Cleanup remote test
-  command: incus delete --force kawa:ct1
+  crystian.incus.incus_instance:
+    name: ct1
+    remote: kawa
+    state: absent
+    force: true
 
 
 # Complex Container Test
 - name: Create storage volume for test
-  command: incus storage volume create default testvol
+  crystian.incus.incus_storage_volume:
+    pool: default
+    name: testvol
+    remote: "{{ target_remote | default(omit) }}"
+    type: filesystem
+    state: present
 
 - name: Test incus_instance (Complex Container)
   crystian.incus.incus_instance:
     name: test-complex-container
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     started: true
     description: "Complex container test"
     storage: default
@@ -127,6 +146,7 @@
   crystian.incus.incus_instance:
     name: test-complex-vm
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     vm: true
     started: true
     storage: default
@@ -146,27 +166,35 @@
       - result_complex_vm.instance.config['limits.cpu'] == "2"
 
 - name: Cleanup complex tests
-  command: incus delete --force {{ item }}
+  crystian.incus.incus_instance:
+    name: "{{ item }}"
+    remote: "{{ target_remote | default(omit) }}"
+    state: absent
+    force: true
   loop:
     - test-complex-container
     - test-complex-vm
-  ignore_errors: true
 
 - name: Cleanup test volume
-  command: incus storage volume delete default testvol
-  ignore_errors: true
+  crystian.incus.incus_storage_volume:
+    pool: default
+    name: testvol
+    remote: "{{ target_remote | default(omit) }}"
+    state: absent
 
 # Deletion Tests (state: absent)
 - name: Create instance for delete test
   crystian.incus.incus_instance:
     name: instance-to-delete
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     started: false
 
 - name: "Delete stopped instance (state: absent)"
   crystian.incus.incus_instance:
     name: instance-to-delete
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: result_delete_stopped
 
@@ -179,12 +207,14 @@
   crystian.incus.incus_instance:
     name: instance-running-delete
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     started: true
 
 - name: Delete running instance (should fail without force)
   crystian.incus.incus_instance:
     name: instance-running-delete
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: result_delete_fail
   ignore_errors: true
@@ -198,6 +228,7 @@
   crystian.incus.incus_instance:
     name: instance-running-delete
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
   register: result_force_delete
@@ -211,6 +242,7 @@
   crystian.incus.incus_instance:
     name: instance-to-delete
     remote_image: images:alpine/edge
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: result_delete_idempotency
 

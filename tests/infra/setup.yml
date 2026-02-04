@@ -1,0 +1,97 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    vm_name: "test-infra-vm"
+    remote_name: "test-infra"
+    image_name: "images:debian/13"
+
+  tasks:
+    - name: Cleanup previous infra
+      crystian.incus.incus_remote:
+        name: "{{ remote_name }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Cleanup previous VM
+      crystian.incus.incus_instance:
+        name: "{{ vm_name }}"
+        state: absent
+        force: true
+      ignore_errors: true
+
+    - name: Create Test VM (Debian 13)
+      crystian.incus.incus_instance:
+        name: "{{ vm_name }}"
+        remote_image: "{{ image_name }}"
+        type: virtual-machine
+        config:
+          limits.cpu: "2"
+          limits.memory: "4GiB"
+          security.nesting: "true"
+        started: true
+        state: present
+      register: infra_vm
+
+    - name: Wait for VM networking
+      wait_for:
+        timeout: 60
+
+    - name: Install dependencies (curl, gpg)
+      crystian.incus.incus_exec:
+        instance: "{{ vm_name }}"
+        command: "sh -c 'apt-get update && apt-get install -y ca-certificates curl gnupg'"
+      register: dep_install
+      retries: 3
+      delay: 5
+      until: dep_install.rc == 0
+
+    - name: Setup Zabbly Key
+      crystian.incus.incus_exec:
+        instance: "{{ vm_name }}"
+        command: "sh -c 'mkdir -p /etc/apt/keyrings; curl -fsSL https://pkgs.zabbly.com/key.asc -o /etc/apt/keyrings/zabbly.asc'"
+
+    - name: Setup Zabbly Repo
+      crystian.incus.incus_exec:
+        instance: "{{ vm_name }}"
+        command: "sh -c 'echo \"deb [signed-by=/etc/apt/keyrings/zabbly.asc] https://pkgs.zabbly.com/incus/daily $(. /etc/os-release && echo ${VERSION_CODENAME}) main\" > /etc/apt/sources.list.d/zabbly-incus-daily.list'"
+
+    - name: Install Incus
+      crystian.incus.incus_exec:
+        instance: "{{ vm_name }}"
+        command: "sh -c 'apt-get update && apt-get install -y incus'"
+      register: incus_install
+
+    - name: Initialize Incus
+      crystian.incus.incus_exec:
+        instance: "{{ vm_name }}"
+        command: "incus admin init --minimal"
+
+    - name: Config bind address
+      crystian.incus.incus_exec:
+        instance: "{{ vm_name }}"
+        command: "incus config set core.https_address :8443"
+
+    - name: Config trust token
+      crystian.incus.incus_exec:
+        instance: "{{ vm_name }}"
+        command: "incus config trust add ansible-client --quiet"
+      register: trust_token_out
+
+    - name: Get VM IP
+      crystian.incus.incus_list:
+        filters:
+          - "{{ vm_name }}"
+      register: vm_info
+
+    - name: Parse IP
+      set_fact:
+         vm_ip: "{{ (vm_info.list | first).state.network | dict2items | map(attribute='value.addresses') | flatten | selectattr('family', 'equalto', 'inet') | map(attribute='address') | first }}"
+
+    - name: Add Remote
+      crystian.incus.incus_remote:
+        name: "{{ remote_name }}"
+        url: "https://{{ vm_ip }}:8443"
+        token: "{{ trust_token_out.stdout | trim }}"
+        accept_certificate: true

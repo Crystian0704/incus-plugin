@@ -1,6 +1,7 @@
 - name: Cleanup (pre-test)
   crystian.incus.incus_instance:
     name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
   ignore_errors: true
@@ -8,6 +9,7 @@
 - name: Create test instance
   crystian.incus.incus_instance:
     name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
     remote_image: "images:alpine/edge/cloud"
     started: true
 
@@ -19,6 +21,7 @@
 - name: Push content with owner/group
   crystian.incus.incus_file:
     name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
     dest: "/root/test_content.txt"
     content: "content-data"
     mode: '0644'
@@ -33,7 +36,10 @@
       - push_content.changed == true
 
 - name: Verify content inside
-  command: incus exec test-file -- cat /root/test_content.txt
+  crystian.incus.incus_exec:
+    name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
+    command: "cat /root/test_content.txt"
   register: verify_content
 
 - name: Assert content match
@@ -49,6 +55,7 @@
 - name: Push file
   crystian.incus.incus_file:
     name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
     src: "/tmp/local_test_file.txt"
     dest: "/root/test_file.txt"
     state: pushed
@@ -60,7 +67,10 @@
       - push_file.changed == true
 
 - name: Verify file inside
-  command: incus exec test-file -- cat /root/test_file.txt
+  crystian.incus.incus_exec:
+    name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
+    command: "cat /root/test_file.txt"
   register: verify_file
 
 - name: Assert file match
@@ -72,6 +82,7 @@
 - name: Pull file
   crystian.incus.incus_file:
     name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
     src: "/root/test_content.txt"
     dest: "/tmp/pulled_content.txt"
     state: pulled
@@ -95,6 +106,7 @@
 - name: Delete file
   crystian.incus.incus_file:
     name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
     dest: "/root/test_content.txt"
     state: absent
   register: delete_file
@@ -105,7 +117,10 @@
       - delete_file.changed == true
 
 - name: Verify deleted
-  command: incus exec test-file -- ls /root/test_content.txt
+  crystian.incus.incus_exec:
+    name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
+    command: "ls /root/test_content.txt"
   register: verify_delete
   ignore_errors: true
 
@@ -117,6 +132,7 @@
 - name: Cleanup (post-test)
   crystian.incus.incus_instance:
     name: "test-file"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
 

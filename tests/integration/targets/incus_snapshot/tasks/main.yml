@@ -1,6 +1,7 @@
 - name: Cleanup snapshot test
   crystian.incus.incus_instance:
     name: "test-snap"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
   ignore_errors: true
@@ -8,6 +9,7 @@
 - name: Create instance
   crystian.incus.incus_instance:
     name: "test-snap"
+    remote: "{{ target_remote | default(omit) }}"
     remote_image: "images:alpine/edge/cloud"
     started: true
 
@@ -15,6 +17,7 @@
   crystian.incus.incus_snapshot:
     instance: "test-snap"
     snapshot: "snap0"
+    remote: "{{ target_remote | default(omit) }}"
     state: present
   register: snap_create
 
@@ -27,6 +30,7 @@
   crystian.incus.incus_snapshot:
     instance: "test-snap"
     snapshot: "snap0"
+    remote: "{{ target_remote | default(omit) }}"
     state: present
   register: snap_dup
   ignore_errors: true
@@ -40,6 +44,7 @@
   crystian.incus.incus_snapshot:
     instance: "test-snap"
     snapshot: "snap0"
+    remote: "{{ target_remote | default(omit) }}"
     state: present
     reuse: true
   register: snap_reuse
@@ -50,7 +55,7 @@
       - snap_reuse.changed == true
 
 - name: List snapshots (DEBUG)
-  command: incus info test-snap
+  command: incus info {{ target_remote | default('local') }}:test-snap
   register: debug_info
 
 - debug:
@@ -61,6 +66,7 @@
     instance: "test-snap"
     snapshot: "snap0"
     new_name: "snap-renamed"
+    remote: "{{ target_remote | default(omit) }}"
     state: renamed
   register: snap_rename
 
@@ -73,6 +79,7 @@
   crystian.incus.incus_snapshot:
     instance: "test-snap"
     snapshot: "snap-renamed"
+    remote: "{{ target_remote | default(omit) }}"
     state: restored
   register: snap_restore
 
@@ -85,6 +92,7 @@
   crystian.incus.incus_snapshot:
     instance: "test-snap"
     snapshot: "snap-renamed"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: snap_delete
 
@@ -96,5 +104,6 @@
 - name: Cleanup
   crystian.incus.incus_instance:
     name: "test-snap"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true

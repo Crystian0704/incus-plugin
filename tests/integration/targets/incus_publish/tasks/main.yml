@@ -1,6 +1,7 @@
 - name: Cleanup publish test
   crystian.incus.incus_image:
     alias: "test-published-img"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
@@ -8,6 +9,7 @@
   crystian.incus.incus_instance:
     name: "test-publish-src"
     remote_image: "images:alpine/edge/cloud"
+    remote: "{{ target_remote | default(omit) }}"
     started: false
     state: present
 
@@ -15,6 +17,8 @@
   crystian.incus.incus_publish:
     instance: "test-publish-src"
     alias: "test-published-img"
+    remote: "{{ target_remote | default(omit) }}"
+    reuse: true
   register: pub_res
 
 - name: Assert published
@@ -27,6 +31,7 @@
   crystian.incus.incus_publish:
     instance: "test-publish-src"
     alias: "test-published-img"
+    remote: "{{ target_remote | default(omit) }}"
     reuse: true
   register: pub_reuse
 
@@ -38,9 +43,11 @@
 - name: Delete published image
   crystian.incus.incus_image:
     alias: "test-published-img"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
 
 - name: Cleanup source
   crystian.incus.incus_instance:
     name: "test-publish-src"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent

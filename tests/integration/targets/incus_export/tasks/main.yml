@@ -1,6 +1,7 @@
 - name: Cleanup export test
   crystian.incus.incus_instance:
     name: "test-export"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
   ignore_errors: true
@@ -13,12 +14,14 @@
 - name: Create instance
   crystian.incus.incus_instance:
     name: "test-export"
+    remote: "{{ target_remote | default(omit) }}"
     remote_image: "images:alpine/edge/cloud"
     started: true
 
 - name: Export instance
   crystian.incus.incus_export:
     instance: "test-export"
+    remote: "{{ target_remote | default(omit) }}"
     path: "/tmp/test-export.tar.gz"
   register: export_res
 
@@ -42,6 +45,7 @@
 - name: Recycle export (no force)
   crystian.incus.incus_export:
     instance: "test-export"
+    remote: "{{ target_remote | default(omit) }}"
     path: "/tmp/test-export.tar.gz"
   register: export_dup
 
@@ -53,6 +57,7 @@
 - name: Recycle export (force)
   crystian.incus.incus_export:
     instance: "test-export"
+    remote: "{{ target_remote | default(omit) }}"
     path: "/tmp/test-export.tar.gz"
     force: true
   register: export_force
@@ -65,6 +70,7 @@
 - name: Cleanup
   crystian.incus.incus_instance:
     name: "test-export"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
 

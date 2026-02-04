@@ -1,6 +1,7 @@
 ---
 - name: List all local instances
   crystian.incus.incus_list:
+    remote: "{{ target_remote | default(omit) }}"
   register: result_all
 
 - name: Verify list structure
@@ -14,12 +15,14 @@
 - name: Setup container for list test
   crystian.incus.incus_instance:
     name: list-test-ct
+    remote: "{{ target_remote | default(omit) }}"
     remote_image: images:alpine/edge
     started: true
 
 - name: Setup VM for list test
   crystian.incus.incus_instance:
     name: list-test-vm
+    remote: "{{ target_remote | default(omit) }}"
     remote_image: images:alpine/edge
     vm: true
     started: false
@@ -28,6 +31,7 @@
 
 - name: List with status filter (Running)
   crystian.incus.incus_list:
+    remote: "{{ target_remote | default(omit) }}"
     filters:
       - status=Running
   register: result_running
@@ -41,6 +45,7 @@
 
 - name: List with type filter (virtual-machine)
   crystian.incus.incus_list:
+    remote: "{{ target_remote | default(omit) }}"
     filters:
       - type=virtual-machine
   register: result_vm
@@ -72,15 +77,16 @@
     that:
       - result_all_remotes.list | length >= 2
       - result_all_remotes.list | selectattr('name', 'equalto', 'list-test-ct') | list | length == 1
-      - result_all_remotes.list | selectattr('name', 'equalto', 'ct1') | list | length == 1
       # Check locations
-      - (result_all_remotes.list | selectattr('name', 'equalto', 'list-test-ct') | first).location in ['none', 'local']
-      - (result_all_remotes.list | selectattr('name', 'equalto', 'ct1') | first).location == 'kawa'
+      - (result_all_remotes.list | selectattr('name', 'equalto', 'list-test-ct') | first).location == (target_remote | default('local'))
 
 # Cleanup
 - name: Cleanup list tests
-  command: incus delete --force {{ item }}
+  crystian.incus.incus_instance:
+    name: "{{ item }}"
+    remote: "{{ target_remote | default(omit) }}"
+    state: absent
+    force: true
   loop:
     - list-test-ct
     - list-test-vm
-  ignore_errors: true

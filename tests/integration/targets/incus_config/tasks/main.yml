@@ -1,14 +1,25 @@
+- name: Cleanup previous test container
+  crystian.incus.incus_instance:
+    name: "test-config-container"
+    remote: "{{ target_remote | default(omit) }}"
+    state: absent
+    force: true
+    remote_image: "images:alpine/edge"
+  ignore_errors: true
+
 
 - name: Create a test container
   crystian.incus.incus_instance:
     name: "test-config-container"
     remote_image: "images:alpine/edge"
+    remote: "{{ target_remote | default(omit) }}"
     state: present
     started: true
 
 - name: Set memory limit
   crystian.incus.incus_config:
     name: "test-config-container"
+    remote: "{{ target_remote | default(omit) }}"
     config:
       limits.memory: "128MiB"
   register: result
@@ -21,6 +32,7 @@
 - name: Set memory limit again (idempotency)
   crystian.incus.incus_config:
     name: "test-config-container"
+    remote: "{{ target_remote | default(omit) }}"
     config:
       limits.memory: "128MiB"
   register: result
@@ -30,12 +42,20 @@
     that:
       - result.changed == false
 
-- name: Create dummy folder for test
+- name: Create dummy folder for test (local)
   command: mkdir -p /tmp/incus_test_vol
+  when: target_remote is not defined
+
+- name: Create dummy folder for test (remote)
+  crystian.incus.incus_exec:
+    name: "test-infra-vm"
+    command: "mkdir -p /tmp/incus_test_vol"
+  when: target_remote is defined
 
 - name: Add disk device
   crystian.incus.incus_config:
     name: "test-config-container"
+    remote: "{{ target_remote | default(omit) }}"
     devices:
       testdisk:
         type: disk
@@ -51,6 +71,7 @@
 - name: Unset config
   crystian.incus.incus_config:
     name: "test-config-container"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     config:
       - limits.memory
@@ -64,6 +85,7 @@
 - name: Remove device
   crystian.incus.incus_config:
     name: "test-config-container"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     devices:
       - testdisk
@@ -78,10 +100,18 @@
   file:
     path: /tmp/incus_test_vol
     state: absent
+  when: target_remote is not defined
+
+- name: Clean up temporary folder (remote)
+  crystian.incus.incus_exec:
+    name: "test-infra-vm"
+    command: "rm -rf /tmp/incus_test_vol"
+  when: target_remote is defined
 
 - name: Remove test container
   crystian.incus.incus_instance:
     name: "test-config-container"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
     remote_image: "images:alpine/edge" # Required by module even for absent

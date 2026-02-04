@@ -1,6 +1,7 @@
 - name: Cleanup image test
   crystian.incus.incus_image:
     alias: "test-alpine"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
@@ -8,6 +9,7 @@
   crystian.incus.incus_image:
     alias: "test-alpine"
     source: "images:alpine/edge"
+    remote: "{{ target_remote | default(omit) }}"
     state: present
   register: img_copy
 
@@ -20,6 +22,7 @@
   crystian.incus.incus_image:
     alias: "test-alpine"
     source: "images:alpine/edge"
+    remote: "{{ target_remote | default(omit) }}"
     state: present
   register: img_copy_idemp
 
@@ -32,6 +35,7 @@
   crystian.incus.incus_image:
     alias: "test-alpine"
     dest: "/tmp/exported_image"
+    remote: "{{ target_remote | default(omit) }}"
     state: exported
   register: img_export
 
@@ -43,6 +47,7 @@
 - name: Delete image
   crystian.incus.incus_image:
     alias: "test-alpine"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: img_del
 
@@ -55,6 +60,7 @@
   crystian.incus.incus_image:
     alias: "test-alpine-imported"
     source: "/tmp/exported_image"
+    remote: "{{ target_remote | default(omit) }}"
     state: present
   register: img_import
 
@@ -66,6 +72,7 @@
 - name: Cleanup imported
   crystian.incus.incus_image:
     alias: "test-alpine-imported"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   
 - name: Cleanup file

@@ -1,12 +1,14 @@
 - name: Cleanup project test
   crystian.incus.incus_project:
     name: "test-project"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
 - name: Create project
   crystian.incus.incus_project:
     name: "test-project"
+    remote: "{{ target_remote | default(omit) }}"
     description: "Test Project"
     config:
       features.images: "false"
@@ -21,6 +23,7 @@
 - name: Update project (idempotence)
   crystian.incus.incus_project:
     name: "test-project"
+    remote: "{{ target_remote | default(omit) }}"
     description: "Test Project"
     config:
       features.images: "false"
@@ -35,6 +38,7 @@
 - name: Update config
   crystian.incus.incus_project:
     name: "test-project"
+    remote: "{{ target_remote | default(omit) }}"
     config:
       limits.containers: "10"
   register: project_update
@@ -45,7 +49,7 @@
       - project_update.changed == true
 
 - name: Verify update
-  command: incus project show test-project
+  command: incus project show {{ target_remote | default('local') }}:test-project
   register: project_show
 
 - name: Assert verify
@@ -66,6 +70,7 @@
   crystian.incus.incus_project:
     name: "test-project-source"
     source: /tmp/test_project_source.yml
+    remote: "{{ target_remote | default(omit) }}"
   register: project_source_create
 
 - name: Assert source create
@@ -74,7 +79,7 @@
       - project_source_create.changed == true
       
 - name: Verify source
-  command: incus project show test-project-source
+  command: incus project show {{ target_remote | default('local') }}:test-project-source
   register: project_source_show
 
 - name: Assert source verify
@@ -86,6 +91,7 @@
   crystian.incus.incus_project:
     name: "test-project-source"
     source: /tmp/test_project_source.yml
+    remote: "{{ target_remote | default(omit) }}"
     config:
       limits.containers: "7"
   register: project_source_update
@@ -98,11 +104,13 @@
 - name: Cleanup source project
   crystian.incus.incus_project:
     name: "test-project-source"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
 
 - name: Delete project
   crystian.incus.incus_project:
     name: "test-project"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: project_delete
 

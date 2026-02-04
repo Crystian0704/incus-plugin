@@ -2,12 +2,14 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-attach"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
 - name: Cleanup instance
   crystian.incus.incus_instance:
     name: "test-attach-instance"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
   ignore_errors: true
@@ -16,6 +18,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-sched"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
@@ -23,12 +26,14 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool-lvm"
     name: "test-vol-block"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
 - name: Cleanup block attach vm
   crystian.incus.incus_instance:
     name: "test-attach-vm"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
   ignore_errors: true
@@ -37,6 +42,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-copy"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
   
@@ -44,18 +50,21 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
 - name: Cleanup storage test
   crystian.incus.incus_storage:
     name: "test-pool"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
   
 - name: Cleanup storage test lvm
   crystian.incus.incus_storage:
     name: "test-pool-lvm"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
@@ -63,6 +72,7 @@
   crystian.incus.incus_storage:
     name: "test-pool"
     driver: dir
+    remote: "{{ target_remote | default(omit) }}"
     description: "Test pool"
   register: pool_create
 
@@ -75,6 +85,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol"
+    remote: "{{ target_remote | default(omit) }}"
     config:
        size: "10MiB"
   register: vol_create
@@ -92,6 +103,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-sched"
+    remote: "{{ target_remote | default(omit) }}"
     config:
        size: "10MiB"
        "snapshots.schedule": "@daily"
@@ -108,6 +120,7 @@
     pool: "test-pool"
     name: "test-vol-sched"
     snapshot: "snap0"
+    remote: "{{ target_remote | default(omit) }}"
     state: present
   register: snap_create
 
@@ -121,6 +134,7 @@
     pool: "test-pool"
     name: "test-vol-sched"
     snapshot: "snap0"
+    remote: "{{ target_remote | default(omit) }}"
     state: restored
   register: snap_restore
 
@@ -133,6 +147,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-sched"
+    remote: "{{ target_remote | default(omit) }}"
     state: exported
     export_to: "/tmp/test-vol.tar.gz"
   register: vol_export
@@ -147,6 +162,7 @@
     pool: "test-pool"
     name: "test-vol-sched"
     state: copied
+    remote: "{{ target_remote | default(omit) }}"
     target_pool: "test-pool"
     target_volume: "test-vol-copy"
   register: vol_copy
@@ -160,6 +176,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-copy"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
 
 - name: Delete snapshot
@@ -167,6 +184,7 @@
     pool: "test-pool"
     name: "test-vol-sched"
     snapshot: "snap0"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: snap_del
 
@@ -179,6 +197,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-sched"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
@@ -192,6 +211,7 @@
   crystian.incus.incus_instance:
     name: "test-attach-instance"
     remote_image: "images:alpine/edge"
+    remote: "{{ target_remote | default(omit) }}"
     state: present
     started: false
 
@@ -199,6 +219,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-attach"
+    remote: "{{ target_remote | default(omit) }}"
     config:
        size: "10MiB"
     attach_to: "test-attach-instance"
@@ -214,6 +235,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-attach"
+    remote: "{{ target_remote | default(omit) }}"
     attach_to: "test-attach-instance"
     attach_path: "/data"
   register: vol_attach_idem
@@ -226,6 +248,7 @@
 - name: Cleanup instance
   crystian.incus.incus_instance:
     name: "test-attach-instance"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
   ignore_errors: true
@@ -234,6 +257,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol-attach"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
@@ -241,6 +265,7 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool"
     name: "test-vol"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: vol_del
 
@@ -252,6 +277,7 @@
 - name: Delete pool (dir)
   crystian.incus.incus_storage:
     name: "test-pool"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: pool_del
 
@@ -265,6 +291,7 @@
   crystian.incus.incus_storage:
     name: "test-pool-zfs"
     driver: zfs
+    remote: "{{ target_remote | default(omit) }}"
     config:
       size: 1GiB
   register: pool_zfs_create
@@ -281,6 +308,7 @@
 - name: Delete pool (zfs)
   crystian.incus.incus_storage:
     name: "test-pool-zfs"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   when: pool_zfs_create is succeeded
   ignore_errors: true
@@ -290,6 +318,7 @@
   crystian.incus.incus_storage:
     name: "test-pool-btrfs"
     driver: btrfs
+    remote: "{{ target_remote | default(omit) }}"
     config:
       size: 1GiB
   register: pool_btrfs_create
@@ -305,6 +334,7 @@
 - name: Delete pool (btrfs)
   crystian.incus.incus_storage:
     name: "test-pool-btrfs"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   when: pool_btrfs_create is succeeded
   ignore_errors: true
@@ -314,6 +344,7 @@
   crystian.incus.incus_storage:
     name: "test-pool-lvm"
     driver: lvm
+    remote: "{{ target_remote | default(omit) }}"
     config:
       size: 1GiB
   register: pool_lvm_create
@@ -331,6 +362,7 @@
     pool: "test-pool-lvm"
     name: "test-vol-block"
     type: block
+    remote: "{{ target_remote | default(omit) }}"
     config:
        size: "10MiB"
   register: vol_block_create
@@ -347,6 +379,7 @@
     name: "test-attach-vm"
     remote_image: "images:alpine/edge"
     vm: true
+    remote: "{{ target_remote | default(omit) }}"
     state: present
     started: false
   when: pool_lvm_create is succeeded
@@ -356,6 +389,7 @@
     pool: "test-pool-lvm"
     name: "test-vol-block"
     type: block
+    remote: "{{ target_remote | default(omit) }}"
     attach_to: "test-attach-vm"
   register: vol_block_attach
   when: pool_lvm_create is succeeded
@@ -369,6 +403,7 @@
 - name: Cleanup block setup
   crystian.incus.incus_instance:
     name: "test-attach-vm"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
     force: true
   ignore_errors: true
@@ -377,12 +412,14 @@
   crystian.incus.incus_storage_volume:
     pool: "test-pool-lvm"
     name: "test-vol-block"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
   
 - name: Delete pool (lvm)
   crystian.incus.incus_storage:
     name: "test-pool-lvm"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   when: pool_lvm_create is succeeded
   ignore_errors: true

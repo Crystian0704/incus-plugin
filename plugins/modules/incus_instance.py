@@ -283,7 +283,12 @@ class IncusInstance(object):
              cmd.extend(['--network', self.network])
         if self.storage:
              cmd.extend(['--storage', self.storage])
-        if self.type:
+        if self.type == 'virtual-machine':
+             cmd.append('--vm')
+        elif self.type == 'container':
+             # Default
+             pass
+        elif self.type:
              cmd.extend(['--type', self.type])
         if self.target:
              cmd.extend(['--target', self.target])
@@ -386,7 +391,7 @@ class IncusInstance(object):
                      self.module.fail_json(msg="Instance created but could not be retrieved.", name=self.name)
 
             # Check running state
-            current_status = info['status'].lower() # e.g. 'running', 'stopped'
+            current_status = info['status'].lower()
             
             if self.started and current_status == 'stopped':
                  if self.module.check_mode:

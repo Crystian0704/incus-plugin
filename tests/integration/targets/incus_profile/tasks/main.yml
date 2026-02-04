@@ -1,12 +1,14 @@
 - name: Cleanup profile test
   crystian.incus.incus_profile:
     name: "test-profile"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   ignore_errors: true
 
 - name: Create profile
   crystian.incus.incus_profile:
     name: "test-profile"
+    remote: "{{ target_remote | default(omit) }}"
     description: "Test Profile"
     config:
       limits.cpu: "1"
@@ -25,6 +27,7 @@
 - name: Update profile (idempotence)
   crystian.incus.incus_profile:
     name: "test-profile"
+    remote: "{{ target_remote | default(omit) }}"
     description: "Test Profile"
     config:
       limits.cpu: "1"
@@ -43,6 +46,7 @@
 - name: Update profile config
   crystian.incus.incus_profile:
     name: "test-profile"
+    remote: "{{ target_remote | default(omit) }}"
     config:
       limits.cpu: "2"
   register: profile_update
@@ -53,7 +57,7 @@
       - profile_update.changed == true
 
 - name: Verify update
-  command: incus profile show test-profile
+  command: incus profile show {{ target_remote | default('local') }}:test-profile
   register: profile_show
 
 - name: Assert verify
@@ -78,6 +82,7 @@
   crystian.incus.incus_profile:
     name: "test-profile-source"
     source: /tmp/test_profile_source.yml
+    remote: "{{ target_remote | default(omit) }}"
   register: profile_source_create
 
 - name: Assert source create
@@ -86,7 +91,7 @@
       - profile_source_create.changed == true
 
 - name: Verify source create
-  command: incus profile show test-profile-source
+  command: incus profile show {{ target_remote | default('local') }}:test-profile-source
   register: profile_source_show
 
 - name: Assert source verify
@@ -99,12 +104,13 @@
   crystian.incus.incus_profile:
     name: "test-profile-source"
     source: /tmp/test_profile_source.yml
+    remote: "{{ target_remote | default(omit) }}"
     config:
       limits.memory: "2GiB" # Override source
   register: profile_source_override
 
 - name: Verify source override
-  command: incus profile show test-profile-source
+  command: incus profile show {{ target_remote | default('local') }}:test-profile-source
   register: profile_override_show
 
 - name: Assert source override
@@ -115,11 +121,13 @@
 - name: Cleanup source profile
   crystian.incus.incus_profile:
     name: "test-profile-source"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
 
 - name: Delete profile
   crystian.incus.incus_profile:
     name: "test-profile"
+    remote: "{{ target_remote | default(omit) }}"
     state: absent
   register: profile_delete
 
